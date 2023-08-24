@@ -31,7 +31,7 @@ dialog_texts = {
         ],
     },
     "No tickers": {
-        "text": "",
+        "text": "You need at least 1 ticker for your condition",
         "buttons": [],
     },
     "Add new rule conditions": {

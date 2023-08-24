@@ -5,7 +5,6 @@ from polygon.enums import Timespan
 
 class YfinanceInterval(enum.Enum):
     minute = "1m"
-    five_minutes = "5m"
     hour = "1h"
     day = "1d"
     week = "1wk"
@@ -15,7 +14,6 @@ class YfinanceInterval(enum.Enum):
 
 class PolygonInterval(enum.Enum):
     minute = (1, Timespan.MINUTE.value)
-    ten_minutes = (10, Timespan.MINUTE.value)
     hour = (1, Timespan.HOUR.value)
     day = (1, Timespan.DAY.value)
     week = (1, Timespan.WEEK.value)
@@ -25,7 +23,6 @@ class PolygonInterval(enum.Enum):
 
 class MOEXInterval(enum.Enum):
     minute = 1
-    ten_minutes = 10
     hour = 60
     day = 24
     week = 7
@@ -35,7 +32,6 @@ class MOEXInterval(enum.Enum):
 
 class DBInterval(enum.Enum):
     minute = "1m"
-    ten_minutes = "10m"
     hour = "1h"
     day = "1d"
     week = "1wk"
@@ -45,7 +41,6 @@ class DBInterval(enum.Enum):
 
 class ResampleInterval(enum.Enum):
     minute = "T"
-    ten_minutes = "10T"
     hour = "H"
     day = "D"
     week = "W"
@@ -55,7 +50,6 @@ class ResampleInterval(enum.Enum):
 
 class ToMinutes(enum.Enum):
     minute = 1
-    ten_minutes = 10
     hour = 60
     day = 60 * 24
     week = 60 * 24 * 7

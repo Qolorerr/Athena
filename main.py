@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Conve
 
 from src.config import telegram_key
 from src.dialog_options import dialog_texts as dialog
-from src.enums import AggregatorName
+from src.enums import AggregatorName, Column
 from src.tickers_naming import TickerColumnNaming, TickerNaming
 
 logging.basicConfig(
@@ -34,12 +34,12 @@ def default_conversation_message(name: str):
 
 @default_conversation_message("Greeting")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['new_tickers']: List[TickerColumnNaming] = []
     return MAIN_MENU
 
 
 @default_conversation_message("Add new rule tickers")
 async def new_rule_tickers(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data['new_tickers']: List[TickerColumnNaming] = []
     return NEW_RULE_TICKERS
 
 
@@ -67,15 +67,18 @@ async def new_ticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def choose_columns(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     question = dialog["Choose columns"]["poll_question"]
     options = ["Time", "Mean price", "Volume", "High", "Low"]
+    columns = ["index", "mean", "vol", "high", "low"]
     if context.user_data['new_ticker_meta'].aggregator == AggregatorName.polygon:
         options += ["Transactions"]
+        columns += ["number"]
     elif context.user_data['new_ticker_meta'].aggregator == AggregatorName.moex_analytic:
         options += ["Long", "Short", "Number of longs", "Number of shorts"]
+        columns += ["long", "short", "long_numb", "short_numb"]
     message = await update.message.reply_poll(question, options, is_anonymous=False,
                                               allows_multiple_answers=True, open_period=60)
     payload = {
         message.poll.id: {
-            "options": options,
+            "columns": columns,
             "message_id": message.message_id,
             "chat_id": update.effective_chat.id,
             "answers": 0,
@@ -89,15 +92,20 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     answer = update.poll_answer
     answered_poll = context.user_data[answer.poll_id]
     try:
-        options = answered_poll["options"]
+        columns = answered_poll["columns"]
     except KeyError:
         return CHOOSE_COLUMNS
     selected_options = answer.option_ids
     if not selected_options:
         return CHOOSE_COLUMNS
     await update.get_bot().stop_poll(answered_poll["chat_id"], answered_poll["message_id"])
-
-    return CHOOSE_COLUMNS
+    column_names = [Column[columns[option]].value for option in selected_options]
+    try:
+        context.user_data['new_tickers'].append(TickerColumnNaming(context.user_data['new_ticker_meta'], column_names))
+    except KeyError as e:
+        logging.error(e.args)
+        return MAIN_MENU
+    return NEW_RULE_TICKERS
 
 
 async def check_tickers(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -128,10 +136,12 @@ if __name__ == '__main__':
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [MessageHandler(button_filter('Greeting', 0), new_rule_tickers),
-                        MessageHandler(button_filter('Greeting', 1), show_graph)],
+                        MessageHandler(button_filter('Greeting', 1), show_graph),
+                        MessageHandler(filters.TEXT, start)],
             NEW_RULE_TICKERS: [MessageHandler(button_filter('Add new rule tickers', 0), add_ticker),
                                MessageHandler(button_filter('Add new rule tickers', 1), check_tickers),
-                               MessageHandler(button_filter('Add new rule tickers', 2), start)],
+                               MessageHandler(button_filter('Add new rule tickers', 2), start),
+                               MessageHandler(filters.TEXT, new_rule_tickers)],
             ADD_TICKER: [MessageHandler(button_filter('Add ticker', 0), new_rule_tickers),
                          MessageHandler(filters.TEXT, new_ticker)],
             CHOOSE_COLUMNS: [MessageHandler(button_filter('Choose columns', 0), new_rule_tickers),
