@@ -220,8 +220,10 @@ class StoreKeeper:
         df = df.set_index(Column.index.value).sort_index()
         return df
 
-    def get_ticker(self, name: TickerNaming) -> pd.DataFrame:
-        df = self.get_ticker_from_db(name, DBInterval[user_interval], start_from_date)
+    def get_ticker(self, name: TickerNaming, custom_interval: str = None) -> pd.DataFrame:
+        interval = custom_interval if custom_interval else user_interval
+
+        df = self.get_ticker_from_db(name, DBInterval[interval], start_from_date)
 
         loop = asyncio.get_event_loop()
         start_from = start_from_date
@@ -229,19 +231,19 @@ class StoreKeeper:
             start_from = datetime.utcfromtimestamp(df.tail(1).index.values[0])
 
         if name.aggregator == AggregatorName.polygon:
-            new_df = self.download_data_from_polygon(name.symbol, start_from, PolygonInterval[user_interval])
+            new_df = self.download_data_from_polygon(name.symbol, start_from, PolygonInterval[interval])
 
         elif name.aggregator == AggregatorName.yfinance:
-            new_df = self.download_data_from_yfinance(name.symbol, start_from, YfinanceInterval[user_interval])
+            new_df = self.download_data_from_yfinance(name.symbol, start_from, YfinanceInterval[interval])
 
         elif name.aggregator == AggregatorName.moex:
             new_df = loop.run_until_complete(self.download_data_from_moex(name.symbol, start_from,
-                                                                          MOEXInterval[user_interval], name.moex_market,
+                                                                          MOEXInterval[interval], name.moex_market,
                                                                           name.moex_engine))
 
         elif name.aggregator == AggregatorName.moex_analytic:
             new_df = loop.run_until_complete(self.download_analytical_data_from_moex(name.symbol, start_from,
-                                                                                     MOEXInterval[user_interval]))
+                                                                                     MOEXInterval[interval]))
 
         else:
             raise ValueError("Unknown aggregator")
@@ -249,6 +251,6 @@ class StoreKeeper:
         df = pd.concat([df, new_df])
         df = df[~df.index.duplicated(keep='last')]
 
-        self.add_ticker_to_db(name, DBInterval[user_interval], start_from, new_df)
+        self.add_ticker_to_db(name, DBInterval[interval], start_from, new_df)
 
         return df
