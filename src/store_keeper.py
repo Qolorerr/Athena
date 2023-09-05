@@ -2,7 +2,7 @@ import asyncio
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
+from typing import List, Awaitable
 
 import aiohttp
 import aiomoex
@@ -244,6 +244,38 @@ class StoreKeeper:
         elif name.aggregator == AggregatorName.moex_analytic:
             new_df = loop.run_until_complete(self.download_analytical_data_from_moex(name.symbol, start_from,
                                                                                      MOEXInterval[interval]))
+
+        else:
+            raise ValueError("Unknown aggregator")
+
+        df = pd.concat([df, new_df])
+        df = df[~df.index.duplicated(keep='last')]
+
+        self.add_ticker_to_db(name, DBInterval[interval], start_from, new_df)
+
+        return df
+
+    async def async_get_ticker(self, name: TickerNaming, custom_interval: str = None) -> Awaitable[pd.DataFrame]:
+        interval = custom_interval if custom_interval else user_interval
+
+        df = self.get_ticker_from_db(name, DBInterval[interval], start_from_date)
+
+        start_from = start_from_date
+        if df is not None:
+            start_from = datetime.utcfromtimestamp(df.tail(1).index.values[0])
+
+        if name.aggregator == AggregatorName.polygon:
+            new_df = self.download_data_from_polygon(name.symbol, start_from, PolygonInterval[interval])
+
+        elif name.aggregator == AggregatorName.yfinance:
+            new_df = self.download_data_from_yfinance(name.symbol, start_from, YfinanceInterval[interval])
+
+        elif name.aggregator == AggregatorName.moex:
+            new_df = await self.download_data_from_moex(name.symbol, start_from, MOEXInterval[interval],
+                                                        name.moex_market, name.moex_engine)
+
+        elif name.aggregator == AggregatorName.moex_analytic:
+            new_df = await self.download_analytical_data_from_moex(name.symbol, start_from, MOEXInterval[interval])
 
         else:
             raise ValueError("Unknown aggregator")

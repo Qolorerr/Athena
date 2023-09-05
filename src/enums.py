@@ -48,6 +48,16 @@ class ResampleInterval(enum.Enum):
     quarter = "Q"
 
 
+class ConditionInterval(enum.Enum):
+    C = "minute"
+    T = "minute"
+    H = "hour"
+    D = "day"
+    W = "week"
+    M = "month"
+    Q = "quarter"
+
+
 class ToMinutes(enum.Enum):
     minute = 1
     hour = 60

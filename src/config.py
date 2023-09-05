@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 
-start_from_date = datetime.now() - timedelta(31)
+start_from_date = datetime.now() - timedelta(728)
 user_interval = "day"
 
 try:

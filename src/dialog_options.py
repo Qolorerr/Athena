@@ -22,7 +22,7 @@ class DialogLines(enum.Enum):
     ticker_added = DialogLine("Successfully added new ticker", ["Add ticker", "Next", "Cancel"])
     no_tickers = DialogLine("You need at least 1 ticker for your condition")
     add_condition = DialogLine(
-        "Example of syntax: mean(YNDX.low[2H])*2<YNDX.vol[C]\n\nWhere:\n - Possible functions: sum(), min(), max(), "
+        "Example of syntax: !YNDX.low[2H].mean()*2<!YNDX.vol[C]\n\nWhere:\n - Possible functions: sum(), min(), max(), "
         "mean()\n\n - YNDX or any ticker you added\n\n - This ticker has only columns you chose but they are written "
         "in the following abbreviations: mean (Mean price), vol (Volume), high (High), low (Low), "
         "number (Transactions), long (Long), short (Short), long_numb (Number of longs), short_numb (Number of "

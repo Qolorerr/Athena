@@ -5,6 +5,7 @@ from typing import Coroutine, List, Callable
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, ConversationHandler, MessageHandler, filters
 
+from src.condition_processor import ConditionProcessor
 from src.config import telegram_key
 from src.dialog_options import DialogLines
 from src.enums import AggregatorName
@@ -90,7 +91,10 @@ async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         else:
             await update.message.reply_text(DialogLines.no_tickers.value.text)
             return MAIN_MENU
-    # TODO: Check condition
+    try:
+        cond_processor.create_condition(context.user_data['new_tickers'], update.message.text)
+    except:
+        return ADD_CONDITION
     await send_default_message(update, DialogLines.created_rule)
     return ConversationHandler.END
 
@@ -101,8 +105,8 @@ async def show_graph(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 @default_conversation_message(DialogLines.end)
-async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    pass
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return ConversationHandler.END
 
 
 def button_filter(line: DialogLines, id: int) -> filters.Text:
@@ -111,6 +115,8 @@ def button_filter(line: DialogLines, id: int) -> filters.Text:
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(telegram_key).build()
+
+    cond_processor = ConditionProcessor()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
