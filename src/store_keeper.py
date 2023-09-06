@@ -16,6 +16,7 @@ from src import db_session
 from src.config import start_from_date, polygon_key, user_interval, moex_login_password
 from src.enums import PolygonInterval, YfinanceInterval, MOEXInterval, ToMinutes, DBInterval, AggregatorShortName, \
     AggregatorName, Column, ResampleInterval
+from src.notifications import Notification
 from src.tickers import Ticker
 from src.tickers_meta import TickerMeta
 from src.tickers_naming import TickerNaming
@@ -286,3 +287,22 @@ class StoreKeeper:
         self.add_ticker_to_db(name, DBInterval[interval], start_from, new_df)
 
         return df
+
+    @staticmethod
+    def add_notification(chat_id: int, condition: str) -> Notification:
+        session = db_session.create_session()
+        notification = Notification()
+        notification.chat_id = chat_id
+        notification.condition = condition
+
+        session.add(notification)
+        session.commit()
+        return notification
+
+    def get_notifications(self, chat_id: int = None) -> List[Notification]:
+        session = db_session.create_session()
+        query = session.query(Notification)
+        if chat_id:
+            query = query.filter(Notification.chat_id == chat_id)
+        return query.all()
+

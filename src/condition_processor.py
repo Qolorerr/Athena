@@ -2,6 +2,7 @@ from typing import List
 
 from src.enums import ConditionInterval
 from src.exceptions import NonexistentTicker, WrongCondition
+from src.notifications import Notification
 from src.store_keeper import StoreKeeper
 from src.tickers_naming import TickerNaming
 
@@ -9,6 +10,11 @@ from src.tickers_naming import TickerNaming
 class ConditionProcessor:
     def __init__(self):
         self.store_keeper = StoreKeeper()
+        self.notifications: List[Notification] = []
+        self.load_notifications()
+
+    def load_notifications(self, chat_id: int = None) -> None:
+        self.notifications = self.store_keeper.get_notifications(chat_id)
 
     @staticmethod
     def _reformat_condition(tickers: List[TickerNaming], condition: str) -> str:
@@ -34,14 +40,14 @@ class ConditionProcessor:
             interval = 'T' if interval == 'C' else interval
             interval_time = int(interval[:-1]) if interval[:-1] else 1
 
-            new_condition += f"self.store_keeper.get_ticker(TickerNaming({ticker_naming.symbol}, " \
+            new_condition += f"sk.get_ticker(TickerNaming({ticker_naming.symbol}, " \
                              f"AggregatorName.{ticker_naming.aggregator.value}, {ticker_naming.name}), " \
                              f"'{interval_type}').tail({interval_time}).{column}"
 
         return new_condition
 
     def _check_condition(self, condition: str) -> bool:
-        allowed_names = {"sum": sum, "len": len}
+        allowed_names = {"sum": sum, "len": len, "sk": self.store_keeper}
         code = compile(condition, "<string>", "eval")
         for name in code.co_names:
             if name not in allowed_names:
@@ -51,7 +57,11 @@ class ConditionProcessor:
         except Exception as e:
             raise WrongCondition(e.args)
 
-    def create_condition(self, tickers: List[TickerNaming], condition: str) -> None:
+    def save_notification(self, chat_id: int, condition: str) -> None:
+        notification = self.store_keeper.add_notification(chat_id, condition)
+        self.notifications.append(notification)
+
+    def create_condition(self, chat_id: int, tickers: List[TickerNaming], condition: str) -> None:
         condition = self._reformat_condition(tickers, condition)
         self._check_condition(condition)
-        # TODO: Save condition to DB
+        self.save_notification(chat_id, condition)

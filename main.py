@@ -92,7 +92,7 @@ async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             await update.message.reply_text(DialogLines.no_tickers.value.text)
             return MAIN_MENU
     try:
-        cond_processor.create_condition(context.user_data['new_tickers'], update.message.text)
+        cond_processor.create_condition(update.message.chat_id, context.user_data['new_tickers'], update.message.text)
     except:
         return ADD_CONDITION
     await send_default_message(update, DialogLines.created_rule)
