@@ -1,5 +1,6 @@
 import functools
 import logging
+from collections import defaultdict
 from typing import Coroutine, List, Callable
 
 from telegram import Update, ReplyKeyboardMarkup
@@ -109,6 +110,21 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
+    active_notifications = cond_processor.get_active_notifications()
+    if not active_notifications:
+        return
+
+    texts_by_chats = defaultdict(list)
+    for notification in active_notifications:
+        texts_by_chats[notification.chat_id].append(notification.condition)
+
+    for chat_id, conditions in texts_by_chats.items():
+        text = "Following conditions activated:\n\n"
+        text += '\n\n'.join(conditions)
+        await context.bot.send_message(chat_id, text)
+
+
 def button_filter(line: DialogLines, id: int) -> filters.Text:
     return filters.Text(line.value.buttons[id])
 
@@ -116,7 +132,7 @@ def button_filter(line: DialogLines, id: int) -> filters.Text:
 if __name__ == '__main__':
     application = ApplicationBuilder().token(telegram_key).build()
 
-    cond_processor = ConditionProcessor()
+    cond_processor = ConditionProcessor(application.job_queue, notification)
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],

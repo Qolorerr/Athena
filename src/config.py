@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 start_from_date = datetime.now() - timedelta(728)
 user_interval = "day"
+notification_interval = 1800
 
 try:
     with open("res/telegram.key", 'r') as f:
