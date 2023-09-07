@@ -1,11 +1,12 @@
 import enum
+from dataclasses import dataclass
 from typing import List
 
 
+@dataclass
 class DialogLine:
-    def __init__(self, text: str = "", buttons: List[str] = []):
-        self.text = text
-        self.buttons = buttons
+    text: str = ""
+    buttons: List[str] = None
 
 
 class DialogLines(enum.Enum):

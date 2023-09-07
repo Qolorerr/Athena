@@ -1,16 +1,18 @@
+import logging
 from typing import List, Callable, Coroutine, Any
 
-from telegram import Update
+import pandas as pd
 from telegram.ext import JobQueue, ContextTypes
 
 from src.config import notification_interval
-from src.enums import ConditionInterval
+from src.enums import ConditionInterval, AggregatorName
 from src.exceptions import NonexistentTicker, WrongCondition
 from src.notifications import Notification
 from src.store_keeper import StoreKeeper
 from src.tickers_naming import TickerNaming
 
 
+logger = logging.getLogger("submodule")
 NOTIFICATOR = "notificator"
 
 
@@ -22,6 +24,7 @@ class ConditionProcessor:
         self.notifications: List[Notification] = []
         self.load_notifications()
         self.set_notificator(notification)
+        logger.info("Condition processor initiated")
 
     def load_notifications(self, chat_id: int = None) -> None:
         self.notifications = self.store_keeper.get_notifications(chat_id)
@@ -43,6 +46,7 @@ class ConditionProcessor:
             new_condition += new_part
             ticker, _, condition = condition.partition('.')
             column, _, condition = condition.partition('[')
+            column = f"['{column}']"
             interval, _, condition = condition.partition(']')
             if condition and condition[0] == '.':
                 new_part, _, condition = condition.partition('()')
@@ -59,35 +63,43 @@ class ConditionProcessor:
             interval = 'T' if interval == 'C' else interval
             interval_time = int(interval[:-1]) if interval[:-1] else 1
 
-            new_condition += f"sk.get_ticker(TickerNaming({ticker_naming.symbol}, " \
-                             f"AggregatorName.{ticker_naming.aggregator.value}, {ticker_naming.name}), " \
-                             f"'{interval_type}').tail({interval_time}).{column}"
+            new_condition += f"await gt(TN('{ticker_naming.symbol}', " \
+                             f"AN{ticker_naming.aggregator.value}, '{ticker_naming.name}'), " \
+                             f"'{interval_type}').tail({interval_time}){column}"
 
         return new_condition
 
-    def _check_condition(self, condition: str) -> bool:
-        allowed_names = {"sum": sum, "len": len, "sk": self.store_keeper}
+    async def _check_condition(self, condition: str) -> bool:
+        allowed_names = {"gt": self.store_keeper.async_get_ticker, "TN": TickerNaming, "tail": pd.DataFrame.tail,
+                         "mean": pd.Series.mean, "max": pd.Series.max, "min": pd.Series.min,
+                         "sum": pd.Series.sum, "item": pd.Series.item}
+        for aggregator in AggregatorName:
+            allowed_names[f"AN{aggregator.value}"] = aggregator
         code = compile(condition, "<string>", "eval")
         for name in code.co_names:
             if name not in allowed_names:
+                logger.debug(f"Wrong condition:\n{condition}")
                 raise NameError(f"Use of {name} not allowed")
         try:
-            return eval(code, {"__builtins__": {}}, allowed_names)
+            return await eval(code, {"__builtins__": {}}, allowed_names)
         except Exception as e:
             raise WrongCondition(e.args)
 
     def save_notification(self, chat_id: int, condition: str) -> None:
         notification = self.store_keeper.add_notification(chat_id, condition)
         self.notifications.append(notification)
+        logger.debug(f"Notification {notification.id} saved")
 
-    def create_condition(self, chat_id: int, tickers: List[TickerNaming], condition: str) -> None:
+    async def create_condition(self, chat_id: int, tickers: List[TickerNaming], condition: str) -> None:
+        logger.debug("Processing new condition")
         condition = self._reformat_condition(tickers, condition)
-        self._check_condition(condition)
+        logger.debug("Checking new condition")
+        await self._check_condition(condition)
         self.save_notification(chat_id, condition)
 
-    def get_active_notifications(self) -> List[Notification]:
+    async def get_active_notifications(self) -> List[Notification]:
         active_notifications = []
         for notification in self.notifications:
-            if self._check_condition(notification.condition):
+            if await self._check_condition(notification.condition):
                 active_notifications.append(notification)
         return active_notifications

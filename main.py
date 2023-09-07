@@ -1,5 +1,5 @@
 import functools
-import logging
+import logging.config
 from collections import defaultdict
 from typing import Coroutine, List, Callable
 
@@ -7,15 +7,13 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, ConversationHandler, MessageHandler, filters
 
 from src.condition_processor import ConditionProcessor
-from src.config import telegram_key
+from src.config import telegram_key, LOGGER_CONFIG
 from src.dialog_options import DialogLines
 from src.enums import AggregatorName
 from src.tickers_naming import TickerNaming
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.config.dictConfig(LOGGER_CONFIG)
+logger = logging.getLogger("bot")
 
 MAIN_MENU, ADD_TICKER, ADD_CONDITION, CREATED, SHOW_GRAPH = range(5)
 
@@ -93,8 +91,14 @@ async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             await update.message.reply_text(DialogLines.no_tickers.value.text)
             return MAIN_MENU
     try:
-        cond_processor.create_condition(update.message.chat_id, context.user_data['new_tickers'], update.message.text)
-    except:
+        await cond_processor.create_condition(update.message.chat_id, context.user_data['new_tickers'],
+                                              update.message.text)
+    except NameError | SyntaxError as e:
+        logger.debug(f"Wrong syntax", exc_info=e)
+        await update.message.reply_text("Wrong syntax")
+        return ADD_CONDITION
+    except Exception as e:
+        logger.debug(f"Something wrong with notification", exc_info=e)
         return ADD_CONDITION
     await send_default_message(update, DialogLines.created_rule)
     return ConversationHandler.END
@@ -111,7 +115,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
-    active_notifications = cond_processor.get_active_notifications()
+    active_notifications = await cond_processor.get_active_notifications()
     if not active_notifications:
         return
 
@@ -119,6 +123,7 @@ async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
     for notification in active_notifications:
         texts_by_chats[notification.chat_id].append(notification.condition)
 
+    logger.debug(f"Sending notification to the following chats: {', '.join(texts_by_chats.keys())}")
     for chat_id, conditions in texts_by_chats.items():
         text = "Following conditions activated:\n\n"
         text += '\n\n'.join(conditions)

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -22,6 +23,9 @@ from src.tickers_meta import TickerMeta
 from src.tickers_naming import TickerNaming
 
 
+logger = logging.getLogger("submodule")
+
+
 class StoreKeeper:
     def __init__(self):
         self.polygon_client = StocksClient(polygon_key)
@@ -38,6 +42,7 @@ class StoreKeeper:
     @staticmethod
     def download_data_from_yfinance(symbol: str, start_from: datetime,
                                     interval: YfinanceInterval) -> pd.DataFrame | None:
+        logger.debug(f"Downloading {symbol} from yfin")
         ticker = yfinance.Ticker(symbol)
 
         df = ticker.history(interval=interval.value, start=start_from)
@@ -56,6 +61,7 @@ class StoreKeeper:
     # Gather new data from polygon
     def download_data_from_polygon(self, symbol: str, start_from: datetime,
                                    interval: PolygonInterval) -> pd.DataFrame | None:
+        logger.debug(f"Downloading {symbol} from poly")
         curr_date = datetime.now()
         if (curr_date - start_from).total_seconds() // 60 < ToMinutes[interval.name].value:
             return None
@@ -100,6 +106,7 @@ class StoreKeeper:
     @staticmethod
     async def download_data_from_moex(symbol: str, start_from: datetime, interval: MOEXInterval, market: str = "shares",
                                       engine: str = "stock") -> pd.DataFrame:
+        logger.debug(f"Downloading {symbol} from moex")
         async with aiohttp.ClientSession() as session:
             data = await aiomoex.get_market_candles(session, symbol, interval.value, start_from.strftime("%Y-%m-%d"),
                                                     market=market, engine=engine)
@@ -126,6 +133,7 @@ class StoreKeeper:
     # Gather analytical data from MOEX
     async def download_analytical_data_from_moex(self, symbol: str, start_from: datetime,
                                                  interval: MOEXInterval) -> pd.DataFrame | None:
+        logger.debug(f"Downloading {symbol} from mxnl")
         if datetime.now() - start_from < timedelta(minutes=5):
             return None
 
@@ -305,4 +313,3 @@ class StoreKeeper:
         if chat_id:
             query = query.filter(Notification.chat_id == chat_id)
         return query.all()
-
