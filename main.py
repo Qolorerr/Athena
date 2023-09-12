@@ -123,7 +123,7 @@ async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
     for notification in active_notifications:
         texts_by_chats[notification.chat_id].append(notification.condition)
 
-    logger.debug(f"Sending notification to the following chats: {', '.join(texts_by_chats.keys())}")
+    logger.debug(f"Sending notification to the following chats: {', '.join(map(str, texts_by_chats.keys()))}")
     for chat_id, conditions in texts_by_chats.items():
         text = "Following conditions activated:\n\n"
         text += '\n\n'.join(conditions)

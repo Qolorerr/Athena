@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import yfinance
 from polygon import StocksClient
-from sqlalchemy import text
+from sqlalchemy import text, select
 
 from src import db_session
 from src.config import start_from_date, polygon_key, user_interval, moex_login_password
@@ -172,8 +172,8 @@ class StoreKeeper:
         if df is None or df.empty:
             return None
         session = db_session.create_session()
-        ticker = session.query(Ticker).filter((Ticker.symbol == name.symbol) &
-                                              (Ticker.aggregator == name.aggregator.value)).first()
+        ticker = session.execute(select(Ticker).where((Ticker.symbol == name.symbol) &
+                                                      (Ticker.aggregator == name.aggregator.value))).scalar()
         if ticker is None:
             ticker = Ticker()
             ticker.name = name.name
@@ -203,21 +203,21 @@ class StoreKeeper:
     @staticmethod
     def list_tickers_in_db() -> List[Ticker]:
         session = db_session.create_session()
-        tickers = session.query(Ticker).all()
+        tickers = session.execute(select(Ticker)).scalars().all()
         return tickers
 
     # List available time periods for all tickers
     @staticmethod
     def list_ticker_meta_in_db() -> List[TickerMeta]:
         session = db_session.create_session()
-        ticker_meta = session.query(TickerMeta).all()
+        ticker_meta = session.execute(select(TickerMeta)).scalars().all()
         return ticker_meta
 
     # Download ticker data from db
     def get_ticker_from_db(self, name: TickerNaming, timespan: DBInterval, from_date: datetime) -> pd.DataFrame | None:
         session = db_session.create_session()
-        ticker = session.query(Ticker).filter((Ticker.symbol == name.symbol) &
-                                              (Ticker.aggregator == name.aggregator.value)).first()
+        ticker = session.execute(select(Ticker).where((Ticker.symbol == name.symbol) &
+                                                      (Ticker.aggregator == name.aggregator.value))).scalar()
         if ticker is None:
             return None
 
@@ -301,22 +301,23 @@ class StoreKeeper:
     @staticmethod
     def add_notification(chat_id: int, condition: str) -> Notification:
         session = db_session.create_session()
-        notification = Notification()
-        notification.chat_id = chat_id
-        notification.condition = condition
+        notification = session.execute(select(Notification).where((Notification.chat_id == chat_id) &
+                                                                  (Notification.condition == condition))).scalar()
+        if not notification:
+            notification = Notification()
+            notification.chat_id = chat_id
+            notification.condition = condition
 
-        session.add(notification)
-        session.commit()
-        session.expunge_all()
-        session.close()
+            session.add(notification)
+            session.commit()
         return notification
 
-    def get_notifications(self, chat_id: int = None) -> List[Notification]:
+    @staticmethod
+    def get_notifications(chat_id: int = None) -> List[Notification]:
         session = db_session.create_session()
-        query = session.query(Notification)
-        if chat_id:
-            query = query.filter(Notification.chat_id == chat_id)
-        query = query.all()
-        session.expunge_all()
-        session.close()
-        return query
+        if chat_id is not None:
+            notifications = session.execute(select(Notification).where(Notification.chat_id == chat_id))
+        else:
+            notifications = session.execute(select(Notification))
+        notifications = notifications.scalars().all()
+        return notifications
