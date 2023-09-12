@@ -111,6 +111,8 @@ class StoreKeeper:
             data = await aiomoex.get_market_candles(session, symbol, interval.value, start_from.strftime("%Y-%m-%d"),
                                                     market=market, engine=engine)
             df = pd.DataFrame(data)
+            if df is None or df.empty:
+                return None
             df[Column.mean.value] = df.loc[:, ['open', 'close']].mean(axis=1)
             df = df.drop(['open', 'close', 'end', 'value'], axis=1)
             df = df.rename({'begin': Column.index.value}, axis=1)
@@ -305,6 +307,8 @@ class StoreKeeper:
 
         session.add(notification)
         session.commit()
+        session.expunge_all()
+        session.close()
         return notification
 
     def get_notifications(self, chat_id: int = None) -> List[Notification]:
@@ -312,4 +316,7 @@ class StoreKeeper:
         query = session.query(Notification)
         if chat_id:
             query = query.filter(Notification.chat_id == chat_id)
-        return query.all()
+        query = query.all()
+        session.expunge_all()
+        session.close()
+        return query
