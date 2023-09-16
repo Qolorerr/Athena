@@ -198,12 +198,14 @@ class StoreKeeper:
         session.commit()
 
         df.to_sql(self.get_storing_name(name), session.bind, if_exists='append')
+        session.close()
 
     # List available tickers
     @staticmethod
     def list_tickers_in_db() -> List[Ticker]:
         session = db_session.create_session()
         tickers = session.execute(select(Ticker)).scalars().all()
+        session.close()
         return tickers
 
     # List available time periods for all tickers
@@ -211,6 +213,7 @@ class StoreKeeper:
     def list_ticker_meta_in_db() -> List[TickerMeta]:
         session = db_session.create_session()
         ticker_meta = session.execute(select(TickerMeta)).scalars().all()
+        session.close()
         return ticker_meta
 
     # Download ticker data from db
@@ -223,6 +226,7 @@ class StoreKeeper:
 
         ticker_meta: List[TickerMeta] = ticker.meta
         ticker_meta: List[TickerMeta] = list(filter(lambda meta: meta.timespan == timespan.value, ticker_meta))
+        session.close()
         if len(ticker_meta) == 0 and name.aggregator != AggregatorName.moex_analytic:
             return None
         storing_name = self.get_storing_name(name)
@@ -299,7 +303,7 @@ class StoreKeeper:
         return df
 
     @staticmethod
-    def add_notification(chat_id: int, condition: str) -> Notification:
+    def add_notification(chat_id: int, condition: str, origin_condition: str) -> Notification:
         session = db_session.create_session()
         notification = session.execute(select(Notification).where((Notification.chat_id == chat_id) &
                                                                   (Notification.condition == condition))).scalar()
@@ -307,9 +311,12 @@ class StoreKeeper:
             notification = Notification()
             notification.chat_id = chat_id
             notification.condition = condition
+            notification.origin_condition = origin_condition
 
             session.add(notification)
             session.commit()
+            session.close()
+            # session.expunge(notification)
         return notification
 
     @staticmethod
@@ -320,4 +327,5 @@ class StoreKeeper:
         else:
             notifications = session.execute(select(Notification))
         notifications = notifications.scalars().all()
+        session.close()
         return notifications

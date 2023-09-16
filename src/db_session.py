@@ -19,7 +19,7 @@ def global_init(db_file: Path):
         raise Exception("You need to set db file name")
     conn_str = f'sqlite:///{db_file}?check_same_thread=False'
     __engine = sa.create_engine(conn_str, echo=False)
-    __factory = orm.sessionmaker(bind=__engine)
+    __factory = orm.sessionmaker(bind=__engine, expire_on_commit=False)
     import src.__all_models
     SqlAlchemyBase.metadata.create_all(__engine)
 

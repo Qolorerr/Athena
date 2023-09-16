@@ -121,7 +121,7 @@ async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     texts_by_chats = defaultdict(list)
     for notification in active_notifications:
-        texts_by_chats[notification.chat_id].append(notification.condition)
+        texts_by_chats[notification.chat_id].append(notification.origin_condition)
 
     logger.debug(f"Sending notification to the following chats: {', '.join(map(str, texts_by_chats.keys()))}")
     for chat_id, conditions in texts_by_chats.items():

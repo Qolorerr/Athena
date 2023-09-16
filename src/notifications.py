@@ -9,3 +9,4 @@ class Notification(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     chat_id = sqlalchemy.Column(sqlalchemy.Integer)
     condition = sqlalchemy.Column(sqlalchemy.String)
+    origin_condition = sqlalchemy.Column(sqlalchemy.String)

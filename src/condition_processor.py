@@ -87,21 +87,17 @@ class ConditionProcessor:
         except Exception as e:
             raise WrongCondition(e)
 
-    def save_notification(self, chat_id: int, condition: str) -> None:
-        notification = self.store_keeper.add_notification(chat_id, condition)
-        try:
-            logger.debug(notification.id)
-        except Exception as e:
-            logger.debug("Notification id??", exc_info=e)
+    def save_notification(self, chat_id: int, condition: str, origin_condition: str) -> None:
+        notification = self.store_keeper.add_notification(chat_id, condition, origin_condition)
         self.notifications.append(notification)
         logger.debug(f"Notification {notification.id} saved")
 
     async def create_condition(self, chat_id: int, tickers: List[TickerNaming], condition: str) -> None:
         logger.debug("Processing new condition")
-        condition = self._reformat_condition(tickers, condition)
+        condition, origin_condition = self._reformat_condition(tickers, condition), condition
         await self._check_condition(condition)
         logger.debug("Checked!")
-        self.save_notification(chat_id, condition)
+        self.save_notification(chat_id, condition, origin_condition)
 
     async def get_active_notifications(self) -> List[Notification]:
         active_notifications = []
