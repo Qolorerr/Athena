@@ -81,6 +81,13 @@ class AggregatorShortName(enum.Enum):
     moex_analytic = "mxnl"
 
 
+class AggregatorNameFromShort(enum.Enum):
+    poly = "polygon"
+    yfin = "yfinance"
+    moex = "moex"
+    mxnl = "moex_analytic"
+
+
 class Column(enum.Enum):
     index = "datetime"
     mean = "mean_price"

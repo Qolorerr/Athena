@@ -1,4 +1,4 @@
-class NonexistentTicker(Exception):
+class NonexistentAggregator(Exception):
     pass
 
 

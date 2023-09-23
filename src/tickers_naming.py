@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, List
 
-from src.enums import AggregatorName, Column
+from src.enums import AggregatorName
 
 
 @dataclass

@@ -5,8 +5,8 @@ import pandas as pd
 from telegram.ext import JobQueue, ContextTypes
 
 from src.config import notification_interval
-from src.enums import ConditionInterval, AggregatorName, Column
-from src.exceptions import NonexistentTicker, WrongCondition
+from src.enums import ConditionInterval, AggregatorName, Column, AggregatorNameFromShort
+from src.exceptions import WrongCondition, NonexistentAggregator
 from src.notifications import Notification
 from src.store_keeper import StoreKeeper
 from src.tickers_naming import TickerNaming
@@ -39,10 +39,10 @@ class ConditionProcessor:
         self.job_queue.run_repeating(notification, notification_interval, name=NOTIFICATOR)
 
     @staticmethod
-    def _reformat_condition(tickers: List[TickerNaming], condition: str) -> str:
+    def _reformat_condition(condition: str) -> str:
         new_condition = 'async def __ex():\n return '
-        while condition.partition('!')[2]:
-            new_part, _, condition = condition.partition('!')
+        while condition.partition('#')[2]:
+            new_part, _, condition = condition.partition('#')
             new_condition += new_part
             ticker, _, condition = condition.partition('.')
             column, _, condition = condition.partition('[')
@@ -54,10 +54,13 @@ class ConditionProcessor:
             else:
                 column += ".tail(1).item()"
 
-            ticker_naming = list(filter(lambda x: x.name == ticker, tickers))
-            if not ticker_naming:
-                raise NonexistentTicker(f"Can't find {ticker} in chosen tickers")
-            ticker_naming = ticker_naming[0]
+            if ':' in ticker:
+                aggregator, _, ticker = ticker.partition(':')
+                if aggregator.lower() not in [agg.name for agg in AggregatorNameFromShort]:
+                    raise NonexistentAggregator(f"There's no such aggregator as {aggregator.lower()}")
+                ticker_naming = TickerNaming(ticker, AggregatorName[AggregatorNameFromShort[aggregator.lower()].value])
+            else:
+                ticker_naming = TickerNaming(ticker, AggregatorName.moex)
 
             interval_type = ConditionInterval[interval[-1]].value
             interval = 'T' if interval == 'C' else interval
@@ -92,9 +95,10 @@ class ConditionProcessor:
         self.notifications.append(notification)
         logger.debug(f"Notification {notification.id} saved")
 
-    async def create_condition(self, chat_id: int, tickers: List[TickerNaming], condition: str) -> None:
+    async def create_condition(self, chat_id: int, condition: str) -> None:
         logger.debug("Processing new condition")
-        condition, origin_condition = self._reformat_condition(tickers, condition), condition
+        condition, origin_condition = self._reformat_condition(condition), condition
+        print(condition, origin_condition)
         await self._check_condition(condition)
         logger.debug("Checked!")
         self.save_notification(chat_id, condition, origin_condition)
