@@ -22,7 +22,6 @@ ORIGIN_CONDITION = "False"
 def test_add_notification(chat_id: int, condition: str, origin_condition: str) -> None:
     store_keeper = StoreKeeper()
     notification = store_keeper.add_notification(chat_id, condition, origin_condition)
-    print(notification.id)
     assert notification.chat_id == chat_id
     assert notification.condition == condition
 
@@ -37,7 +36,23 @@ def test_get_notifications(chat_id: int, condition: str, origin_condition: str) 
     store_keeper = StoreKeeper()
     notifications = store_keeper.get_notifications(chat_id)
     assert notifications
-    notification = notifications[0]
+    notification = [val for val in notifications.values()][0]
     assert notification.chat_id == chat_id
     assert notification.condition == condition
     assert notification.origin_condition == origin_condition
+
+
+@pytest.mark.parametrize(
+    "chat_id",
+    [
+        CHAT_ID
+    ]
+)
+def test_remove_notification(chat_id: int) -> None:
+    store_keeper = StoreKeeper()
+    notifications = store_keeper.get_notifications(chat_id)
+    assert notifications
+    notification = [val for val in notifications.values()][0]
+    store_keeper.remove_notification(notification.id)
+    notifications = store_keeper.get_notifications(chat_id)
+    assert not notifications

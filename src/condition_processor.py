@@ -1,12 +1,12 @@
 import logging
-from typing import List, Callable, Coroutine, Any
+from typing import List, Callable, Coroutine, Any, Dict
 
 import pandas as pd
 from telegram.ext import JobQueue, ContextTypes
 
 from src.config import notification_interval
 from src.enums import ConditionInterval, AggregatorName, Column, AggregatorNameFromShort
-from src.exceptions import WrongCondition, NonexistentAggregator
+from src.exceptions import WrongCondition, NonexistentAggregator, NonexistentNotification
 from src.notifications import Notification
 from src.store_keeper import StoreKeeper
 from src.tickers_naming import TickerNaming
@@ -21,7 +21,7 @@ class ConditionProcessor:
                  notification: Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]):
         self.job_queue = job_queue
         self.store_keeper = StoreKeeper()
-        self.notifications: List[Notification] = []
+        self.notifications: Dict[int, Notification] = dict()
         self.load_notifications()
         self.set_notificator(notification)
         logger.info("Condition processor initiated")
@@ -92,7 +92,7 @@ class ConditionProcessor:
 
     def save_notification(self, chat_id: int, condition: str, origin_condition: str) -> None:
         notification = self.store_keeper.add_notification(chat_id, condition, origin_condition)
-        self.notifications.append(notification)
+        self.notifications[notification.id] = notification
         logger.debug(f"Notification {notification.id} saved")
 
     async def create_condition(self, chat_id: int, condition: str) -> None:
@@ -103,9 +103,22 @@ class ConditionProcessor:
         logger.debug("Checked!")
         self.save_notification(chat_id, condition, origin_condition)
 
+    def list_notifications(self, chat_id: int) -> List[Notification]:
+        notifications = []
+        for notification in self.notifications.values():
+            if notification.chat_id == chat_id:
+                notifications.append(notification)
+        return notifications
+
+    def remove_notification(self, id: int) -> None:
+        if id not in self.notifications:
+            raise NonexistentNotification
+        self.store_keeper.remove_notification(id)
+        self.notifications.pop(id)
+
     async def get_active_notifications(self) -> List[Notification]:
         active_notifications = []
-        for notification in self.notifications:
+        for notification in self.notifications.values():
             if await self._check_condition(notification.condition):
                 active_notifications.append(notification)
         return active_notifications

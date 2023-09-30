@@ -12,8 +12,8 @@ class DialogLines(enum.Enum):
         "Hi! This bot can help to analyse stocks market. You can set some conditions and if the condition is met, "
         "you will be notified")
     help = DialogLine(
-        "Possible commands:\n\n/help {command} - get info about some command\n\n/add {condition} - create new "
-        "notification")
+        "Possible commands:\n\n/help {command} - get info about some command\n\n/list - list all your "
+        "notifications\n\n/add {condition} - create new notification")
     add_condition = DialogLine(
         "Example of syntax: #YNDX.low[2H].mean()*2<#POLY:AAPL.vol[C]\n\nWhere:\n - Possible functions: sum(), min(), "
         "max(), mean()\n\n - Tickers: #POLY:AAPL, where possible aggregators: MOEX, POLY (polygon), YFIN (yahoo "
@@ -24,4 +24,7 @@ class DialogLines(enum.Enum):
         "shorts)\n\n - Possible time spans: T (minute), H (hour), D (day), W (week), M (month), Q (quarter), "
         "C (current, exactly the same as 1T) and number before them")
     wrong_condition_syntax = DialogLine("Wrong syntax")
+    wrong_notification_id = DialogLine("Wrong notification id. Check </help remove> for help")
+    no_notifications = DialogLine("You have no any notifications")
     created_rule = DialogLine("Rule saved!")
+    removed_rule = DialogLine("Notification removed!")

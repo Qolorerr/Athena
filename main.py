@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 from src.condition_processor import ConditionProcessor
 from src.config import telegram_key, LOGGER_CONFIG
 from src.dialog_options import DialogLines
-from src.exceptions import WrongCondition, NonexistentAggregator
+from src.exceptions import WrongCondition, NonexistentAggregator, NonexistentNotification
 
 logging.config.dictConfig(LOGGER_CONFIG)
 logger = logging.getLogger("bot")
@@ -38,7 +38,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @default_conversation_message(DialogLines.help)
 async def help_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # TODO: help message processor
     pass
+
+
+async def list_conditions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    notifications = cond_processor.list_notifications(update.message.chat_id)
+    if not notifications:
+        await send_default_message(update, DialogLines.no_notifications)
+        return 
+    text = "Your notifications:\n\n"
+    text += '\n\n'.join(f"{notification.id}   {notification.origin_condition}" for notification in notifications)
+    await update.message.reply_text(text)
 
 
 async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -56,6 +67,16 @@ async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.debug(f"Something wrong with notification", exc_info=e)
         return
     await send_default_message(update, DialogLines.created_rule)
+
+
+async def remove_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        cond_processor.remove_notification(int(update.message.text.removeprefix("/remove ")))
+    except ValueError | NonexistentNotification as e:
+        logger.debug(f"WA", exc_info=e)
+        await send_default_message(update, DialogLines.wrong_notification_id)
+        return
+    await send_default_message(update, DialogLines.removed_rule)
 
 
 async def notification(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -81,6 +102,8 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help_message))
     # TODO: Add argument filter
+    application.add_handler(CommandHandler('list', list_conditions))
     application.add_handler(CommandHandler('add', add_condition))
+    application.add_handler(CommandHandler('remove', remove_condition))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)

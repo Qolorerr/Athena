@@ -3,7 +3,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Awaitable
+from typing import List, Awaitable, Dict
 
 import aiohttp
 import aiomoex
@@ -17,6 +17,7 @@ from src import db_session
 from src.config import start_from_date, polygon_key, user_interval, moex_login_password
 from src.enums import PolygonInterval, YfinanceInterval, MOEXInterval, ToMinutes, DBInterval, AggregatorShortName, \
     AggregatorName, Column, ResampleInterval
+from src.exceptions import NonexistentNotification
 from src.notifications import Notification
 from src.tickers import Ticker
 from src.tickers_meta import TickerMeta
@@ -320,7 +321,7 @@ class StoreKeeper:
         return notification
 
     @staticmethod
-    def get_notifications(chat_id: int = None) -> List[Notification]:
+    def get_notifications(chat_id: int = None) -> Dict[int, Notification]:
         session = db_session.create_session()
         if chat_id is not None:
             notifications = session.execute(select(Notification).where(Notification.chat_id == chat_id))
@@ -328,4 +329,15 @@ class StoreKeeper:
             notifications = session.execute(select(Notification))
         notifications = notifications.scalars().all()
         session.close()
+        notifications = {notification.id: notification for notification in notifications}
         return notifications
+
+    @staticmethod
+    def remove_notification(id: int) -> None:
+        session = db_session.create_session()
+        notification = session.execute(select(Notification).where(Notification.id == id)).scalar()
+        if notification:
+            session.delete(notification)
+            session.commit()
+        else:
+            raise NonexistentNotification()
