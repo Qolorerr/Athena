@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 from src.condition_processor import ConditionProcessor
 from src.config import telegram_key, LOGGER_CONFIG
 from src.dialog_options import DialogLines
+from src.enums import Command, CommandHelpMessage
 from src.exceptions import WrongCondition, NonexistentAggregator, NonexistentNotification
 
 logging.config.dictConfig(LOGGER_CONFIG)
@@ -36,10 +37,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     return
 
 
-@default_conversation_message(DialogLines.help)
 async def help_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # TODO: help message processor
-    pass
+    if len(update.message.text.split()) == 1:
+        await send_default_message(update, DialogLines.help)
+        return
+    command = update.message.text.removeprefix(f"/{Command.help.value} ")
+    for item in Command:
+        if command in (item.value, '/' + item.value):
+            await send_default_message(update, CommandHelpMessage[item.name].value)
+            return
+    await update.message.reply_text(f"I don't know command {command}")
 
 
 async def list_conditions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -64,7 +71,7 @@ async def add_condition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text(e.args[0])
         return
     except Exception as e:
-        logger.debug(f"Something wrong with notification", exc_info=e)
+        logger.error(f"Something wrong with notification", exc_info=e)
         return
     await send_default_message(update, DialogLines.created_rule)
 
@@ -100,10 +107,10 @@ if __name__ == '__main__':
 
     cond_processor = ConditionProcessor(application.job_queue, notification)
     application.add_handler(CommandHandler('start', start))
-    application.add_handler(CommandHandler('help', help_message))
+    application.add_handler(CommandHandler(Command.help.value, help_message))
     # TODO: Add argument filter
-    application.add_handler(CommandHandler('list', list_conditions))
-    application.add_handler(CommandHandler('add', add_condition))
-    application.add_handler(CommandHandler('remove', remove_condition))
+    application.add_handler(CommandHandler(Command.list.value, list_conditions))
+    application.add_handler(CommandHandler(Command.add.value, add_condition))
+    application.add_handler(CommandHandler(Command.remove.value, remove_condition))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)

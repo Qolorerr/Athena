@@ -2,6 +2,8 @@ import enum
 
 from polygon.enums import Timespan
 
+from src.dialog_options import DialogLines
+
 
 class YfinanceInterval(enum.Enum):
     minute = "1m"
@@ -103,3 +105,17 @@ class Column(enum.Enum):
     short = "short"
     long_numb = "number_long"
     short_numb = "number_short"
+
+
+class Command(enum.Enum):
+    help = "help"
+    add = "add"
+    list = "list"
+    remove = "remove"
+
+
+class CommandHelpMessage(enum.Enum):
+    help = DialogLines.help
+    add = DialogLines.add_condition
+    list = DialogLines.list_notifications
+    remove = DialogLines.remove_notification

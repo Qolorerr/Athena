@@ -13,7 +13,8 @@ class DialogLines(enum.Enum):
         "you will be notified")
     help = DialogLine(
         "Possible commands:\n\n/help {command} - get info about some command\n\n/list - list all your "
-        "notifications\n\n/add {condition} - create new notification")
+        "notifications\n\n/add {condition} - create new notification\n\n/remove {notification_id} - remove "
+        "notification")
     add_condition = DialogLine(
         "Example of syntax: #YNDX.low[2H].mean()*2<#POLY:AAPL.vol[C]\n\nWhere:\n - Possible functions: sum(), min(), "
         "max(), mean()\n\n - Tickers: #POLY:AAPL, where possible aggregators: MOEX, POLY (polygon), YFIN (yahoo "
@@ -23,6 +24,8 @@ class DialogLines(enum.Enum):
         "number (Transactions), long (Long), short (Short), long_numb (Number of longs), short_numb (Number of "
         "shorts)\n\n - Possible time spans: T (minute), H (hour), D (day), W (week), M (month), Q (quarter), "
         "C (current, exactly the same as 1T) and number before them")
+    list_notifications = DialogLine("Use it to show active notifications and their ID's")
+    remove_notification = DialogLine("Use it to remove active notification. Notification ID you can get from /list")
     wrong_condition_syntax = DialogLine("Wrong syntax")
     wrong_notification_id = DialogLine("Wrong notification id. Check </help remove> for help")
     no_notifications = DialogLine("You have no any notifications")
