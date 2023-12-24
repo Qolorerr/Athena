@@ -1,5 +1,5 @@
 import logging
-from typing import List, Callable, Coroutine, Any, Dict
+from typing import Callable, Coroutine, Any
 
 import pandas as pd
 from telegram.ext import JobQueue, ContextTypes
@@ -21,7 +21,7 @@ class ConditionProcessor:
                  notification: Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]):
         self.job_queue = job_queue
         self.store_keeper = StoreKeeper()
-        self.notifications: Dict[int, Notification] = dict()
+        self.notifications: dict[int, Notification] = dict()
         self.load_notifications()
         self.set_notificator(notification)
         logger.info("Condition processor initiated")
@@ -54,21 +54,29 @@ class ConditionProcessor:
             else:
                 column += ".tail(1).item()"
 
+            rewind = 0
+            if ':' in interval:
+                interval, _, rewind = interval.partition(':')
+                try:
+                    rewind = int(rewind)
+                except ValueError:
+                    raise WrongCondition(f"Wrong rewind value: {rewind}")
+                if rewind >= 0:
+                    raise WrongCondition(f"Wrong rewind value: {rewind}")
+            timespan = ConditionInterval[interval[-1]].value
+            interval_time = int(interval[:-1]) if interval[:-1] else 1
+            end = rewind
+            start = end - interval_time
+
+            aggregator_name = AggregatorName.moex
             if ':' in ticker:
                 aggregator, _, ticker = ticker.partition(':')
                 if aggregator.lower() not in [agg.name for agg in AggregatorNameFromShort]:
                     raise NonexistentAggregator(f"There's no such aggregator as {aggregator.lower()}")
-                ticker_naming = TickerNaming(ticker, AggregatorName[AggregatorNameFromShort[aggregator.lower()].value])
-            else:
-                ticker_naming = TickerNaming(ticker, AggregatorName.moex)
+                aggregator_name = AggregatorName[AggregatorNameFromShort[aggregator.lower()].value]
 
-            interval_type = ConditionInterval[interval[-1]].value
-            interval = 'T' if interval == 'C' else interval
-            interval_time = int(interval[:-1]) if interval[:-1] else 1
-
-            new_condition += f"(await gt(TN('{ticker_naming.symbol}', " \
-                             f"AN{ticker_naming.aggregator.value}, '{ticker_naming.name}'), " \
-                             f"'{interval_type}')).tail({interval_time}){column}"
+            new_condition += f"(await gt(TN('{ticker}', AN{aggregator_name.value}, '{timespan}'), " \
+                             f"{start}, {end})).tail({interval_time}){column}"
 
         return new_condition + condition
 
@@ -103,7 +111,7 @@ class ConditionProcessor:
         logger.debug("Checked!")
         self.save_notification(chat_id, condition, origin_condition)
 
-    def list_notifications(self, chat_id: int) -> List[Notification]:
+    def list_notifications(self, chat_id: int) -> list[Notification]:
         notifications = []
         for notification in self.notifications.values():
             if notification.chat_id == chat_id:
@@ -116,7 +124,7 @@ class ConditionProcessor:
         self.store_keeper.remove_notification(id)
         self.notifications.pop(id)
 
-    async def get_active_notifications(self) -> List[Notification]:
+    async def get_active_notifications(self) -> list[Notification]:
         active_notifications = []
         for notification in self.notifications.values():
             if await self._check_condition(notification.condition):

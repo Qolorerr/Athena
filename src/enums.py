@@ -33,15 +33,6 @@ class MOEXInterval(enum.Enum):
 
 
 class DBInterval(enum.Enum):
-    minute = "1m"
-    hour = "1h"
-    day = "1d"
-    week = "1wk"
-    month = "1mo"
-    quarter = "3mo"
-
-
-class ResampleInterval(enum.Enum):
     minute = "T"
     hour = "H"
     day = "D"
@@ -70,22 +61,22 @@ class ToMinutes(enum.Enum):
 
 
 class AggregatorName(enum.Enum):
-    polygon = "polygon"
-    yfinance = "yfinance"
+    # polygon = "polygon"
+    # yfinance = "yfinance"
     moex = "moex"
     moex_analytic = "moex_analytic"
 
 
 class AggregatorShortName(enum.Enum):
-    polygon = "poly"
-    yfinance = "yfin"
+    # polygon = "poly"
+    # yfinance = "yfin"
     moex = "moex"
     moex_analytic = "mxnl"
 
 
 class AggregatorNameFromShort(enum.Enum):
-    poly = "polygon"
-    yfin = "yfinance"
+    # poly = "polygon"
+    # yfin = "yfinance"
     moex = "moex"
     mxnl = "moex_analytic"
 
@@ -97,8 +88,8 @@ class Column(enum.Enum):
     high = "high"
     low = "low"
 
-    # For polygon
-    number = "transactions"
+    # # For polygon
+    # number = "transactions"
 
     # For MOEX analytics
     long = "long"

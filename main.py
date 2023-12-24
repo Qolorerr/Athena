@@ -53,7 +53,7 @@ async def list_conditions(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     notifications = cond_processor.list_notifications(update.message.chat_id)
     if not notifications:
         await send_default_message(update, DialogLines.no_notifications)
-        return 
+        return
     text = "Your notifications:\n\n"
     text += '\n\n'.join(f"{notification.id}   {notification.origin_condition}" for notification in notifications)
     await update.message.reply_text(text)
@@ -108,9 +108,9 @@ if __name__ == '__main__':
     cond_processor = ConditionProcessor(application.job_queue, notification)
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler(Command.help.value, help_message))
-    # TODO: Add argument filter
     application.add_handler(CommandHandler(Command.list.value, list_conditions))
     application.add_handler(CommandHandler(Command.add.value, add_condition))
     application.add_handler(CommandHandler(Command.remove.value, remove_condition))
 
+    logger.debug("Starting application")
     application.run_polling(allowed_updates=Update.ALL_TYPES)

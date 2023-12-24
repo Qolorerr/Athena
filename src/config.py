@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 
 
-start_from_date = datetime.now() - timedelta(7)
-user_interval = "day"
 # TODO: DEBUG mode. Turn to 1800
 notification_interval = 30
 

@@ -1,24 +1,16 @@
 from dataclasses import dataclass
-from typing import Optional, List
 
-from src.enums import AggregatorName
+from src.enums import AggregatorName, DBInterval
 
 
 @dataclass
 class TickerNaming:
-    symbol: str
+    name: str
     aggregator: AggregatorName
-    name: Optional[str] = None
+    timespan: str
 
-    moex_market: Optional[str] = "shares"
-    moex_engine: Optional[str] = "stock"
+    moex_market: str | None = "shares"
+    moex_engine: str | None = "stock"
 
-    def __post_init__(self):
-        if self.name is None:
-            self.name = self.symbol
-
-
-@dataclass
-class TickerColumnNaming:
-    naming: TickerNaming
-    columns: List[str]
+    def db_interval(self) -> str:
+        return DBInterval[self.timespan].value
